@@ -1,1 +1,246 @@
+---
+- name: passwordless sudo for wheel group
+  hosts: all
+  become: true
+  tasks:
+    - name: sudo without password for wheel group
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/passwordless-wheel
+        content: '%wheel	ALL=(ALL)	NOPASSWD: ALL'
 
+- name: Install packages that apply to both server and workstation
+  hosts: all
+  become: true
+  tasks:
+    - name: install clevis packages
+      ansible.builtin.dnf:
+        name: 
+          - clevis-luks
+          - clevis-dracut
+          - unzip
+          - ansible
+          - cockpit 
+          - cockpit-bridge 
+          - cockpit-file-sharing 
+          - cockpit-machines 
+          - cockpit-navigator 
+          - cockpit-networkmanager 
+          - cockpit-ostree 
+          - cockpit-packagekit 
+          - cockpit-pcp 
+          - cockpit-selinux 
+          - cockpit-podman 
+          - cockpit-storaged 
+          - cockpit-system 
+          - cockpit-ws
+        state: latest
+
+- name: Set up automatic unlock
+  hosts: all
+  become: true
+  no_log: false
+  tasks:
+    - name: install clevis packages
+      ansible.builtin.dnf:
+        name: 
+          - clevis-luks
+          - clevis-dracut
+        state: latest
+
+  vars:
+    nbde_client_bindings:
+      - device: /dev/vda3
+        encryption_password: <LUKS PASSWORD>
+        servers: 
+          - http://fedora.home.io
+  roles:
+    - fedora.linux_system_roles.nbde_client
+
+- name: Install Virtualization
+  hosts: workstation
+  tasks:
+    - name: install virtualization package group
+      become: true
+      ansible.builtin.dnf:
+        name: '@virtualization'
+        state: latest
+
+- name: Install workstation packages
+  hosts: workstation
+  become: true
+  tasks:
+    - name: install gnome-tweaks, xrdp, tigervnc-server, gnome-shell, unzip
+      ansible.builtin.dnf:
+        name: 
+          - gnome-tweaks
+          - xrdp
+          - tigervnc-server
+          - gnome-shell
+        state: latest
+
+- name: Enable and Start xrdp
+  hosts: workstation
+  become: true
+  tasks:
+    - name: Enable and Start xrdp service
+      ansible.builtin.systemd_service:
+        enabled: true
+        state: started
+        name: xrdp 
+
+- name: Open RDP and cockpit ports
+  hosts: workstation
+  become: true
+  tasks:
+    - name: Open RDP port 3389
+      ansible.posix.firewalld:
+        service: rdp
+        permanent: true
+        state: enabled
+    - name: Open Cockpit port 9090
+      ansible.posix.firewalld:
+        service: cockpit
+        permanent: true
+        state: enabled
+
+- name: Create vnc directory for VNC user
+  hosts: workstation
+  tasks:
+  - name: Create .vnc directory
+    ansible.builtin.file:
+      path: "/home/{{ ansible_user_id }}/.vnc"
+      state: directory
+      mode: 0755
+
+- name: Set VNC password for VNC user
+  hosts: workstation
+  tasks:
+  - name: Set VNC Password for user
+    ansible.builtin.shell: |
+      set -o pipefail
+      echo "<VNC PASSWORD>" | vncpasswd -f > /home/<USERNAME>/.vnc/passwd
+    args:
+      executable: /bin/bash
+      creates: /home/<USERNAME>/.vnc/passwd
+
+- name: Set correct permissions for VNC passwd file
+  hosts: workstation
+  tasks:
+  - name: Set correct permissions for VNC passwd file
+    ansible.builtin.file:
+      path: "/home/{{ ansible_user_id }}/.vnc/passwd"
+      mode: 0600
+
+- name: Enable and Start Cockpit
+  hosts: all
+  become: true
+  tasks:
+    - name: start and enable cockpit
+      ansible.builtin.systemd_service:
+        name: cockpit
+        state: started
+        enabled: true
+
+- name: Install 1password
+  hosts: workstation
+  become: true
+  tasks:
+    - name: Add 1password repository
+      ansible.builtin.yum_repository:
+        name: 1password
+        description: 1Password Stable Repository
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://downloads.1password.com/linux/keys/1password.asc
+        baseurl: https://downloads.1password.com/linux/rpm/stable/x86_64
+    - name: Install 1password
+      ansible.builtin.dnf:
+        name: 
+          - 1password
+        state: latest
+
+- name: Add NordVPN repository
+  hosts: workstation
+  become: true
+  tasks:
+    - name: Add NordVPN repository
+      ansible.builtin.yum_repository:
+        name: nordvpn
+        description: NordVPN repository
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://repo.nordvpn.com/gpg/nordvpn_public.asc
+        baseurl: https://repo.nordvpn.com//yum/nordvpn/centos/x86_64
+    - name: Install NordVPN
+      ansible.builtin.dnf:
+        name: 
+          - nordvpn
+        state: latest
+      
+- name: Install Gnome Extensions 2-Fippery, 6-App Menu, 4994-Dash2Dock, 3843-JustPerfection
+  hosts: workstation
+  roles:
+    - role: jaredhocutt.gnome_extensions
+      vars:
+        gnome_extension_ids:
+          - 2
+          - 6
+          - 4994
+          - 3843
+
+- name: install flatpaks
+  hosts: workstation
+  become: true
+  tasks: 
+    - name: add flathub repository
+      community.general.flatpak_remote:
+        name: FlatHub
+        state: present
+        flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+    - name: install FlatPaks
+      community.general.flatpak:
+        state: present
+        name: 
+          - org.signal.Signal
+          - com.bitwarden.desktop
+          - com.google.Chrome
+          - com.slack.Slack
+          - com.visualstudio.code
+          - com.github.tchx84.Flatseal
+          - io.github.JakubMelka.Pdf4qt
+          - com.github.unrud.djpdf
+          - com.synology.SynologyDrive
+
+- name: Update user groups
+  hosts: workstation
+  become: true
+  tasks:
+    - name: add current user to the libvirt and nordvpn groups
+      ansible.builtin.user:
+        name: "{{ ansible_user_id }}"
+        groups: libvirt, nordvpn
+        append: yes
+
+- name: Set Gnome favorite apps to be pinned to the dock
+  hosts: workstation
+  tasks:
+    - name: Set favorite apps in Gnome
+      ansible.builtin.shell: gsettings set org.gnome.shell favorite-apps "['firefox.desktop','com.google.Chrome.desktop','org.gnome.Nautilus.desktop','org.gnome.Terminal.desktop','org.signal.Signal.desktop','com.visualstudio.code.desktop','virt-manager.desktop']"
+
+- name: Update OS and reboot if packages were updated
+  hosts: all
+  become: true
+  tasks:
+    - name: update system
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+        update_cache: yes
+        update_only: yes
+      register: dnf_update_status
+    - name: Remove packages not needed anymore
+      ansible.builtin.dnf:
+        autoremove: yes
+    - name: Reboot if packages were updated
+      reboot:
+      when: dnf_update_status.changed
