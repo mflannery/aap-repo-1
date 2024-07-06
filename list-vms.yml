@@ -1,0 +1,13 @@
+---
+- name: list all KVM VMs
+  hosts: all
+  become: true
+  tasks:
+    - name: List all VMs
+      community.libvirt.virt:
+        command: list_vms
+      register: all_vms
+    - name: print all_vms
+      ansible.builtin.debug:
+        msg: VM name "{{ item }}"
+      loop: "{{ all_vms.list_vms }}"
