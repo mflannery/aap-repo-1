@@ -1,9 +1,9 @@
 ---
-- name: passwordless sudo for wheel group
+- name: Passwordless sudo for wheel group
   hosts: all
   become: true
   tasks:
-    - name: sudo without password for wheel group
+    - name: Sudo without password for wheel group
       ansible.builtin.copy:
         dest: /etc/sudoers.d/passwordless-wheel
         content: '%wheel	ALL=(ALL)	NOPASSWD: ALL'
@@ -12,9 +12,9 @@
   hosts: all
   become: true
   tasks:
-    - name: install clevis packages
+    - name: Install clevis packages
       ansible.builtin.dnf:
-        name: 
+        name:
           - clevis-luks
           - clevis-dracut
           - unzip
@@ -40,9 +40,9 @@
   become: true
   no_log: false
   tasks:
-    - name: install clevis packages
+    - name: Install clevis packages
       ansible.builtin.dnf:
-        name: 
+        name:
           - clevis-luks
           - clevis-dracut
         state: latest
@@ -51,7 +51,7 @@
     nbde_client_bindings:
       - device: /dev/vda3
         encryption_password: <LUKS PASSWORD>
-        servers: 
+        servers:
           - http://fedora.home.io
   roles:
     - fedora.linux_system_roles.nbde_client
@@ -59,7 +59,7 @@
 - name: Install Virtualization
   hosts: workstation
   tasks:
-    - name: install virtualization package group
+    - name: Install virtualization package group
       become: true
       ansible.builtin.dnf:
         name: '@virtualization'
@@ -69,9 +69,9 @@
   hosts: workstation
   become: true
   tasks:
-    - name: install gnome-tweaks, xrdp, tigervnc-server, gnome-shell, unzip
+    - name: Install gnome-tweaks, xrdp, tigervnc-server, gnome-shell, unzip
       ansible.builtin.dnf:
-        name: 
+        name:
           - gnome-tweaks
           - xrdp
           - tigervnc-server
@@ -135,7 +135,7 @@
   hosts: all
   become: true
   tasks:
-    - name: start and enable cockpit
+    - name: Start and enable cockpit
       ansible.builtin.systemd_service:
         name: cockpit
         state: started
@@ -155,7 +155,7 @@
         baseurl: https://downloads.1password.com/linux/rpm/stable/x86_64
     - name: Install 1password
       ansible.builtin.dnf:
-        name: 
+        name:
           - 1password
         state: latest
 
@@ -173,7 +173,7 @@
         baseurl: https://repo.nordvpn.com//yum/nordvpn/centos/x86_64
     - name: Install NordVPN
       ansible.builtin.dnf:
-        name: 
+        name:
           - nordvpn
         state: latest
       
@@ -188,19 +188,19 @@
           - 4994
           - 3843
 
-- name: install flatpaks
+- name: Install flatpaks
   hosts: workstation
   become: true
-  tasks: 
-    - name: add flathub repository
+  tasks:
+    - name: Add flathub repository
       community.general.flatpak_remote:
         name: FlatHub
         state: present
         flatpakrepo_url: https://dl.flathub.org/repo/flathub.flatpakrepo
-    - name: install FlatPaks
+    - name: Install FlatPaks
       community.general.flatpak:
         state: present
-        name: 
+        name:
           - org.signal.Signal
           - com.bitwarden.desktop
           - com.google.Chrome
@@ -215,7 +215,7 @@
   hosts: workstation
   become: true
   tasks:
-    - name: add current user to the libvirt and nordvpn groups
+    - name: Add current user to the libvirt and nordvpn groups
       ansible.builtin.user:
         name: "{{ ansible_user_id }}"
         groups: libvirt, nordvpn
@@ -231,7 +231,7 @@
   hosts: all
   become: true
   tasks:
-    - name: update system
+    - name: Update system
       ansible.builtin.dnf:
         name: '*'
         state: latest
