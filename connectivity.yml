@@ -1,6 +1,6 @@
 ---
 - name: Check Connectivity and Report
-  hosts: nodes
+  hosts: all
   gather_facts: false
   tasks:
   
