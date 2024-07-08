@@ -1,0 +1,32 @@
+---
+- name: Check Connectivity and Report
+  hosts: nodes
+  gather_facts: false
+  tasks:
+  
+    - name: 01 - Test Connectivity
+      ansible.builtin.ping:
+      register: connectivity
+      ignore_unreachable: true
+
+    - name: 02 - Save summary of connectivity check
+      ansible.builtin.set_fact:
+        summary: "{{ (summary | default([])) + [ item + ';' + _result ] }}"
+      vars:
+        _result: "{{ (hostvars[item]['connectivity']['msg'] | default('OK')).splitlines() | join()  }}"
+      loop: "{{ ansible_play_hosts }}"
+      delegate_to: localhost    
+      run_once: true
+
+    - name: 03 - Show result
+      ansible.builtin.debug:
+        msg: "{{ summary }}"
+      delegate_to: localhost    
+      run_once: true
+
+    - name: 04 - Save result to csv file
+      ansible.builtin.copy:
+        content: "{{ (summary | sort | join('\n')) + '\n' }}"
+        dest: /tmp/connectivity_test.csv
+      delegate_to: aapwork
+      run_once: true
