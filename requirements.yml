@@ -17,8 +17,8 @@ collections:
     version: ">=8.0.0"
   - name: containers.podman
     version: ">=1.12.1"
-  - name: redhat.insights
-    version: ">=1.2.2"
+#  - name: redhat.insights
+#    version: ">=1.2.2"
   - name: redhat.rhel_system_roles
     version: ">=1.23.0"
   # windows
@@ -29,8 +29,8 @@ collections:
   - name: community.windows
     version: ">=2.2.0"
   # cloud
-  - name: amazon.aws
-    version: ">=7.5.0"
+#  - name: amazon.aws
+#    version: ">=7.5.0"
   # satellite
 #  - name: redhat.satellite
 #    version: ">=4.0.0"
